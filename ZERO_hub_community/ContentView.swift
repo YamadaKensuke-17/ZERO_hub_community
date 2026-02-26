@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import UIKit
+import MapKit
 
 struct ContentView: View {
     @State private var selectedTab: Tab = .home
@@ -238,6 +240,13 @@ private struct ReserveScreen: View {
 
 // MARK: - ZERO CAFE Screen
 private struct ZeroCafeScreen: View {
+    @State private var region = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 35.1709, longitude: 136.9907), // 仮: 上社駅付近
+        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+    )
+    @State private var cafeCoordinate: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: 35.1709, longitude: 136.9907)
+    private let cafeAddress: String = "愛知県名古屋市名東区上社１丁目５１２ かとう館 1F"
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -245,71 +254,126 @@ private struct ZeroCafeScreen: View {
                     VStack(spacing: 16) {
                         // Top shop photo area
                         ZStack {
-                            // Replace this placeholder with a real image when available
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.gray.opacity(0.15))
-                                .frame(maxWidth: .infinity)
-                                .aspectRatio(16/9, contentMode: .fit)
-                                .overlay(
-                                    Image(systemName: "photo.on.rectangle")
-                                        .font(.system(size: 40, weight: .regular))
-                                        .foregroundStyle(.secondary)
-                                )
+                            // Try to load from local file path first (for immediate preview), then fall back to asset
+                            Group {
+                                if let uiImage = UIImage(contentsOfFile: "/Users/zerosclab/Desktop/スクリーンショット 2026-02-26 18.32.46.png") {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                } else if UIImage(named: "cafeHero") != nil {
+                                    Image("cafeHero")
+                                        .resizable()
+                                        .scaledToFill()
+                                } else {
+                                    // Fallback placeholder
+                                    ZStack {
+                                        Color.gray.opacity(0.15)
+                                        Image(systemName: "photo.on.rectangle")
+                                            .font(.system(size: 40, weight: .regular))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .aspectRatio(16/9, contentMode: .fit)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 32)
 
-                        // Hero card with cup icon and shop photo badge
+                        // Cafe description under the photo
+                        Text("""
+ZERO CAFEは上社駅徒歩1分の、明るくて開放的な居心地の良いカフェ。
+併設のZERO Strength & Conditioning Labが
+その奥に広がり、心も身体も元気になれる空間を提供しています。
+ジムのご利用に関係なく、美味しいスペシャルティーコーヒー（豆はLittle Flower Coffeのオリジナル）を飲みながらゆったり過ごしていただけます。
+インスタで営業日やイベントの開催など、
+最新情報をアップしていますので時々チェックをお願いします！
+""")
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal)
+
+                        // CONTACT-like section under the paragraph
                         VStack(alignment: .leading, spacing: 12) {
-                            HStack(alignment: .center, spacing: 12) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.gray.opacity(0.12))
-                                        .frame(width: 56, height: 56)
-                                    Image(systemName: "cup.and.saucer")
-                                        .font(.system(size: 24, weight: .semibold))
-                                        .foregroundStyle(.secondary)
-                                }
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("心と体を整える一杯")
-                                        .font(.headline)
+                            // Small section header
+                            Text("CONTACT")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.primary)
+                                .underline(true, color: Color.primary.opacity(0.4))
+                                .padding(.bottom, 4)
+
+                            // Map replacing image
+                            Map(position: .constant(.region(region))) {
+                                Marker("ZERO CAFE", coordinate: cafeCoordinate)
+                            }
+                            .mapStyle(.standard)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 200)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                            )
+
+                            // Two-column info (address / hours & phone)
+                            HStack(alignment: .top, spacing: 16) {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("〒465-0025")
+                                        .font(.subheadline)
                                         .foregroundStyle(.primary)
-                                    Text("厳選された豆と、リラックスできる空間をご提供します。運動後のリフレッシュに最適です。")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                    Text("愛知県名古屋市名東区上社１丁目５１２ からつ館１F")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
                                         .fixedSize(horizontal: false, vertical: true)
+                                    AccessInfoRow(kind: .car, text: "お車でお越しの際は 近隣のパーキングをご利用下さい。")
                                 }
-                                Spacer()
-                                // Removed Text("店内写真") badge here
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "clock")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        Text("営業時間：不定休")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.primary)
+                                    }
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "phone")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        Text("電話番号：052-737-5888")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.primary)
+                                    }
+                                    AccessInfoRow(kind: .train, text: "電車でお越しの際は、地下鉄東山線を利用して 上社駅を下車して西に徒歩1分")
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
-                        .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-                        )
-                        .padding(.horizontal)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
 
-                        // Beans info card
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("豆の紹介")
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                            Text("産地や特徴をチェック")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-                        )
-                        .padding(.horizontal)
+                        // Removed the entire VStack with cafe holiday and map as per instructions
+
+                        // The old address/contact and access notes removed as per instruction
                     }
                     .padding(.top, 12)
                     .padding(.bottom, 100)
+                    .onAppear {
+                        let geocoder = CLGeocoder()
+                        geocoder.geocodeAddressString(cafeAddress) { placemarks, error in
+                            if let location = placemarks?.first?.location?.coordinate {
+                                cafeCoordinate = location
+                                region.center = location
+                                region.span = MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                            }
+                        }
+                    }
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -584,6 +648,43 @@ private struct AdultsListRow: View {
                 .fill(Color(.systemBackground))
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
         )
+    }
+}
+
+// Added reusable AccessInfoRow view here
+private struct AccessInfoRow: View {
+    enum Kind { case car, train }
+
+    let kind: Kind
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color(.systemYellow))
+                Image(systemName: iconName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 30, height: 30)
+
+            Text(text)
+                .font(.footnote)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var iconName: String {
+        switch kind {
+        case .car: return "car.fill"
+        case .train: return "tram.fill"
+        }
     }
 }
 
